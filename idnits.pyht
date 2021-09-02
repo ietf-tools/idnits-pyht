@@ -78,7 +78,10 @@ Content-Type: text/html
         uploaddst = re.sub("[^a-zA-Z0-9_.-]","_", uploaddst)
         if re.match(".*\.(out|txt)$", uploaddst):
             sys.stderr.write("X-Here: 2.1\n")
-            uploaddst = os.path.join("/tmp", uploaddst)
+            uploaddir = os.path.join("/tmp", "idnits%d" % os.getpid())
+            if not os.path.exists(uploaddir):
+                os.makedirs(uploaddir)
+            uploaddst = os.path.join(uploaddir, uploaddst)
 
             if os.path.exists(uploaddst):
                 os.remove(uploaddst)
@@ -108,6 +111,7 @@ Content-Type: text/html
                 switches = switches.replace("--showtext ", "")
             os.system("/a/www/ietf-datatracker/scripts/idnits %s %s" % (switches, uploaddst))
             os.unlink(uploaddst)
+            #os.rmdir(uploaddir)
             sys.exit(0)
         else:
             print("Location: http://www.ietf.org/tools/idnits/\n")
