@@ -1,0 +1,122 @@
+<?python # -*- html -*-
+
+    import sys
+
+    import re, os
+    from os.path import basename
+
+    if not os.environ.get('HOME', None):
+	os.environ['HOME'] = "/var/lib/wwwrun/"
+    def error(num, msg, url):
+	print "Status: %s %s\n" % (num, msg)
+	errmsg = (
+"""Status: %s %s
+Content-Type: text/html
+
+<!--#set var="TITLE" value="Not Found" -->
+<!--#include virtual="/error/include/top.html" -->
+
+    The requested document (%s) was not found on this server.
+
+  <!--#if expr="$HTTP_REFERER" -->
+
+    The link on the
+    <a href="<!--#echo encoding="url" var="HTTP_REFERER" -->">referring
+    page</a> seems to be wrong or outdated. Please inform the author of
+    <a href="<!--#echo encoding="url" var="HTTP_REFERER" -->">that page</a>
+    about the error.
+
+  <!--#else -->
+
+    If you entered the URL manually please check your
+    spelling and try again.
+
+  <!--#endif -->
+
+<!--#include virtual="/error/include/bottom.html" -->		
+""" % (num, msg, url))
+	
+
+    # No args, return index.html
+    if len(args) == 0:
+        with open('/a/www/www6s/tools/idnits/index.html') as f:
+            print 'Content-Type: text/html\n\n'
+            print f.read()
+        sys.exit(0)
+
+    # Handle possible uploaded files.
+    uploadsrc = ""
+
+    if "filename" in args:
+	if form["filename"].filename:
+	    uploadsrc = form["filename"].filename
+	else:
+	    uploadsrc = form["filename"].value
+
+	if uploadsrc[:8] == "https://" or uploadsrc[:7] == "http://" or uploadsrc[:6] == "ftp://":
+	    import urllib
+	    uploadfile = urllib.urlopen(uploadsrc)
+	elif form["filename"].file:
+	    uploadfile = form["filename"].file
+	else:
+	    # We didn't get a file upload, and also didn't get a URL we could fetch.
+	    pass
+
+    elif "url" in args:
+	#sys.stderr.write("X-Here: 1\n")
+	try:
+	    import urllib
+	    uploadsrc = args["url"]
+	    uploadfile = urllib.urlopen(uploadsrc)
+	except:
+	    error("404", "Not Found", uploadsrc)
+	    sys.exit(1)
+
+    if uploadsrc and uploadfile:
+	#sys.stderr.write("X-Here: 2\n")
+	uploaddst = basename(re.sub("\\\\","/", uploadsrc))
+	uploaddst = re.sub("[^a-zA-Z0-9_.-]","_", uploaddst)
+	if re.match(".*\.(out|txt)$", uploaddst):
+	    sys.stderr.write("X-Here: 2.1\n")
+	    uploaddst = os.path.join("/tmp", uploaddst)
+
+	    if os.path.exists(uploaddst):
+		os.remove(uploaddst)
+	    outputfile = open(uploaddst, "w")
+	    have_content = False
+	    while 1:
+		line = uploadfile.readline()
+		if not line: break
+		outputfile.write(line)
+		have_content = True
+	    outputfile.close()
+	    os.chmod(uploaddst, 0666)
+	    if not have_content:
+		print("Location: http://www.ietf.org/tools/idnits/\n")
+		sys.exit(0)
+
+	    print("Content-Type: text/plain\n")
+	    switches = "--showtext"
+	    if "vverbose" in args:
+		switches += " --verbose --verbose"
+	    elif "verbose" in args:
+		switches += " --verbose"
+	    if "year" in args and re.match("^[0-9]+$", args["year"]):
+		switches += " --year %s" % args["year"]
+	    if "submitcheck" in args:
+		switches += " --submitcheck"
+		switches = switches.replace("--showtext ", "")
+	    os.system("/a/www/ietf-datatracker/scripts/idnits %s %s" % (switches, uploaddst))
+	    os.unlink(uploaddst)
+	    sys.exit(0)
+	else:
+	    print("Location: http://www.ietf.org/tools/idnits/\n")
+	    sys.exit(0)
+
+    elif not "submit" in args:
+	print("Location: http://www.ietf.org/tools/idnits/\n")
+	sys.exit(0)
+    else:
+	sys.stderr.write("X-Here: 4\n")
+	print("Location: http://www.ietf.org/tools/idnits/\n")
+?>
