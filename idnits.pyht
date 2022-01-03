@@ -59,6 +59,7 @@ Content-Type: text/html
                 uploadfile = urllib2.urlopen(uploadsrc, timeout=20)
             except:
                 error("404", "Not Found", uploadsrc)
+                sys.exit(1)
         elif form["filename"].file:
             uploadfile = form["filename"].file
         else:
