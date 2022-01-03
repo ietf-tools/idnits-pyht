@@ -54,8 +54,11 @@ Content-Type: text/html
             uploadsrc = form["filename"].value
 
         if uploadsrc[:8] == "https://" or uploadsrc[:7] == "http://" or uploadsrc[:6] == "ftp://":
-            import urllib
-            uploadfile = urllib.urlopen(uploadsrc)
+            import urllib2
+            try:
+                uploadfile = urllib2.urlopen(uploadsrc, timeout=20)
+            except:
+                error("404", "Not Found", uploadsrc)
         elif form["filename"].file:
             uploadfile = form["filename"].file
         else:
@@ -65,9 +68,9 @@ Content-Type: text/html
     elif "url" in args:
         #sys.stderr.write("X-Here: 1\n")
         try:
-            import urllib
+            import urllib2
             uploadsrc = args["url"]
-            uploadfile = urllib.urlopen(uploadsrc)
+            uploadfile = urllib2.urlopen(uploadsrc, timeout=20)
         except:
             error("404", "Not Found", uploadsrc)
             sys.exit(1)
